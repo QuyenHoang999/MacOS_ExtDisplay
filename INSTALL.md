@@ -46,3 +46,4 @@ If you want users to download a ready-to-install `.dmg` from your GitHub reposit
    `https://github.com/QuyenHoang999/MacOS_ExtDisplay/releases/new`
 3. Enter a tag (e.g. `v1.0.0`) and title (`ExtDisplay v1.0.0`).
 4. Drag and drop `dist/ExtDisplayHost.dmg` into the **Attach binaries** box and click **Publish release**.
+

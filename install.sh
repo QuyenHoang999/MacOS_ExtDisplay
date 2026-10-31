@@ -89,3 +89,4 @@ echo "==> Starting ${APP_NAME} in background..."
 open -g -j -a "${INSTALL_PATH}" --args --background
 
 echo "✅ Installed ${INSTALL_PATH} and started in the background (check the top menu bar icon)."
+
