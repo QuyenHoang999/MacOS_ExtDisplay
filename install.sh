@@ -1,53 +1,59 @@
 #!/bin/zsh
 #
-# install.sh — Builds and installs ExtDisplayHost.app into /Applications
-# and optionally packages a distributable ExtDisplayHost.dmg installer.
+# install.sh — Builds and installs ExtDisplayHost (macOS) and/or ExtDisplayClient (iOS/iPadOS)
 #
 # Usage:
-#   ./install.sh          # Build Release app, install to /Applications & start in background
-#   ./install.sh --dmg    # Also create dist/ExtDisplayHost.dmg for sharing / GitHub Releases
+#   ./install.sh            # Build & install macOS Host to /Applications & start in background
+#   ./install.sh --dmg      # Build macOS Host + create dist/ExtDisplayHost.dmg
+#   ./install.sh --client   # Build iOS/iPadOS Client -> dist/ExtDisplayClient.ipa (& install if device connected)
+#   ./install.sh --all      # Build macOS Host (.dmg) + iOS/iPadOS Client (.ipa)
 #
 
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DERIVED_DIR="/tmp/ExtDisplayInstallerBuild"
-APP_NAME="ExtDisplayHost.app"
-INSTALL_PATH="/Applications/${APP_NAME}"
-LAUNCH_AGENT_PLIST="${HOME}/Library/LaunchAgents/com.QHpersonalteam.ExtDisplay.Host.plist"
+DIST_DIR="${PROJECT_DIR}/dist"
+MODE="${1:-host}"
 
-echo "==> Building ${APP_NAME} (Release)..."
-rm -rf "${DERIVED_DIR}"
-xcodebuild \
-  -project "${PROJECT_DIR}/Ext_Display.xcodeproj" \
-  -scheme ExtDisplayHost \
-  -configuration Release \
-  -destination 'platform=macOS' \
-  -derivedDataPath "${DERIVED_DIR}" \
-   build | tail -n 20
+build_host() {
+  local create_dmg="${1:-false}"
+  local derived_dir="/tmp/ExtDisplayHostBuild"
+  local app_name="ExtDisplayHost.app"
+  local install_path="/Applications/${app_name}"
+  local launch_agent_plist="${HOME}/Library/LaunchAgents/com.QHpersonalteam.ExtDisplay.Host.plist"
 
-BUILT_APP="${DERIVED_DIR}/Build/Products/Release/${APP_NAME}"
-if [[ ! -d "${BUILT_APP}" ]]; then
-  echo "Error: Build product not found at ${BUILT_APP}" >&2
-  exit 1
-fi
+  echo "==> Building ${app_name} (Release for macOS)..."
+  rm -rf "${derived_dir}"
+  xcodebuild \
+    -project "${PROJECT_DIR}/Ext_Display.xcodeproj" \
+    -scheme ExtDisplayHost \
+    -configuration Release \
+    -destination 'platform=macOS' \
+    -derivedDataPath "${derived_dir}" \
+    build | tail -n 20
 
-echo "==> Stopping any running ExtDisplayHost instance..."
-killall -9 ExtDisplayHost 2>/dev/null || true
+  local built_app="${derived_dir}/Build/Products/Release/${app_name}"
+  if [[ ! -d "${built_app}" ]]; then
+    echo "Error: Build product not found at ${built_app}" >&2
+    exit 1
+  fi
 
-echo "==> Installing to ${INSTALL_PATH}..."
-rm -rf "${INSTALL_PATH}"
-cp -R "${BUILT_APP}" "${INSTALL_PATH}"
-xattr -cr "${INSTALL_PATH}" 2>/dev/null || true
+  echo "==> Stopping any running ExtDisplayHost instance..."
+  killall -9 ExtDisplayHost 2>/dev/null || true
 
-LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
-if [[ -x "${LSREGISTER}" ]]; then
-  "${LSREGISTER}" -f -R -trusted "${INSTALL_PATH}" || true
-fi
+  echo "==> Installing to ${install_path}..."
+  rm -rf "${install_path}"
+  cp -R "${built_app}" "${install_path}"
+  xattr -cr "${install_path}" 2>/dev/null || true
 
-echo "==> Configuring background auto-start at Mac login..."
-mkdir -p "${HOME}/Library/LaunchAgents"
-cat > "${LAUNCH_AGENT_PLIST}" <<EOF
+  local lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
+  if [[ -x "${lsregister}" ]]; then
+    "${lsregister}" -f -R -trusted "${install_path}" || true
+  fi
+
+  echo "==> Configuring background auto-start at Mac login..."
+  mkdir -p "${HOME}/Library/LaunchAgents"
+  cat > "${launch_agent_plist}" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -58,7 +64,7 @@ cat > "${LAUNCH_AGENT_PLIST}" <<EOF
     <array>
         <string>/bin/sh</string>
         <string>-c</string>
-        <string>pgrep -x ExtDisplayHost &gt;/dev/null 2&gt;&amp;1 || /usr/bin/open -g -j -a '${INSTALL_PATH}' --args --background</string>
+        <string>pgrep -x ExtDisplayHost &gt;/dev/null 2&gt;&amp;1 || /usr/bin/open -g -j -a '${install_path}' --args --background</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -68,25 +74,88 @@ cat > "${LAUNCH_AGENT_PLIST}" <<EOF
 </plist>
 EOF
 
-if [[ "${1:-}" == "--dmg" ]]; then
-  DIST_DIR="${PROJECT_DIR}/dist"
-  STAGING_DIR="/tmp/ExtDisplayDMGStaging"
-  DMG_PATH="${DIST_DIR}/ExtDisplayHost.dmg"
-  echo "==> Creating distributable DMG at ${DMG_PATH}..."
+  if [[ "${create_dmg}" == "true" ]]; then
+    local staging_dir="/tmp/ExtDisplayDMGStaging"
+    local dmg_path="${DIST_DIR}/ExtDisplayHost.dmg"
+    echo "==> Creating distributable DMG at ${dmg_path}..."
+    mkdir -p "${DIST_DIR}"
+    rm -rf "${staging_dir}" "${dmg_path}"
+    mkdir -p "${staging_dir}"
+    cp -R "${install_path}" "${staging_dir}/${app_name}"
+    ln -s /Applications "${staging_dir}/Applications"
+    hdiutil create -volname "ExtDisplay Host" -srcfolder "${staging_dir}" -ov -format UDZO "${dmg_path}"
+    rm -rf "${staging_dir}"
+    echo "✅ Created macOS DMG: ${dmg_path}"
+  fi
+
+  rm -rf "${derived_dir}"
+
+  echo "==> Starting ${app_name} in background..."
+  open -g -j -a "${install_path}" --args --background
+  echo "✅ Installed ${install_path} and started in the background."
+}
+
+build_client() {
+  local derived_dir="/tmp/ExtDisplayClientBuild"
+  local app_name="ExtDisplayClient.app"
+  local ipa_staging="/tmp/ExtDisplayIPAStaging"
+  local ipa_path="${DIST_DIR}/ExtDisplayClient.ipa"
+
+  echo "==> Building ${app_name} (Release for iOS/iPadOS)..."
+  rm -rf "${derived_dir}"
+  xcodebuild \
+    -project "${PROJECT_DIR}/Ext_Display.xcodeproj" \
+    -scheme ExtDisplayClient \
+    -configuration Release \
+    -destination 'generic/platform=iOS' \
+    -derivedDataPath "${derived_dir}" \
+    -allowProvisioningUpdates \
+    build | tail -n 20
+
+  local built_app="${derived_dir}/Build/Products/Release-iphoneos/${app_name}"
+  if [[ ! -d "${built_app}" ]]; then
+    echo "Error: Client app not found at ${built_app}" >&2
+    exit 1
+  fi
+
+  echo "==> Packaging ${ipa_path}..."
   mkdir -p "${DIST_DIR}"
-  rm -rf "${STAGING_DIR}" "${DMG_PATH}"
-  mkdir -p "${STAGING_DIR}"
-  cp -R "${INSTALL_PATH}" "${STAGING_DIR}/${APP_NAME}"
-  ln -s /Applications "${STAGING_DIR}/Applications"
-  hdiutil create -volname "ExtDisplay Host" -srcfolder "${STAGING_DIR}" -ov -format UDZO "${DMG_PATH}"
-  rm -rf "${STAGING_DIR}"
-  echo "==> Created DMG: ${DMG_PATH}"
-fi
+  rm -rf "${ipa_staging}" "${ipa_path}"
+  mkdir -p "${ipa_staging}/Payload"
+  cp -R "${built_app}" "${ipa_staging}/Payload/${app_name}"
+  (cd "${ipa_staging}" && zip -qry "${ipa_path}" Payload)
+  rm -rf "${ipa_staging}"
+  echo "✅ Created iOS/iPadOS IPA: ${ipa_path}"
 
-rm -rf "${DERIVED_DIR}"
+  # If an iPad or iPhone is connected via USB, install directly onto the device
+  local device_id
+  device_id="$(xcrun xctrace list devices 2>/dev/null | awk '/^== Devices ==/{flag=1;next} /^==/{flag=0} flag && !/Mac/ && /\([0-9A-Fa-f-]+\)$/{match($0, /\(([0-9A-Fa-f-]+)\)$/); print substr($0, RSTART+1, RLENGTH-2); exit}' || true)"
+  if [[ -n "${device_id}" ]]; then
+    echo "==> Detected connected iOS/iPadOS device (${device_id}) — installing ${app_name}..."
+    xcrun devicectl device install app --device "${device_id}" "${built_app}" || true
+  else
+    echo "ℹ️  To install onto your iPad/iPhone: plug it in via USB-C and run './install.sh --client' again (or drag ${ipa_path} into Apple Configurator / Finder)."
+  fi
 
-echo "==> Starting ${APP_NAME} in background..."
-open -g -j -a "${INSTALL_PATH}" --args --background
+  rm -rf "${derived_dir}"
+}
 
-echo "✅ Installed ${INSTALL_PATH} and started in the background (check the top menu bar icon)."
-
+case "${MODE}" in
+  host)
+    build_host "false"
+    ;;
+  --dmg)
+    build_host "true"
+    ;;
+  --client)
+    build_client
+    ;;
+  --all)
+    build_host "true"
+    build_client
+    ;;
+  *)
+    echo "Usage: ./install.sh [--dmg | --client | --all]" >&2
+    exit 1
+    ;;
+esac

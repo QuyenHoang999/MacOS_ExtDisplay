@@ -88,6 +88,18 @@ To also package a distributable drag-and-drop `.dmg` installer (`dist/ExtDisplay
 ./install.sh --dmg
 ```
 
+To build the iOS/iPadOS Client (`dist/ExtDisplayClient.ipa`) and automatically install it onto a USB-connected iPad or iPhone:
+
+```bash
+./install.sh --client
+```
+
+To build both `dist/ExtDisplayHost.dmg` and `dist/ExtDisplayClient.ipa` at once:
+
+```bash
+./install.sh --all
+```
+
 ### 2. Build & Run via Xcode
 
 1. **Open the Project**:

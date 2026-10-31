@@ -20,6 +20,18 @@ To generate a drag-and-drop `dist/ExtDisplayHost.dmg` file (for sharing or uploa
 ./install.sh --dmg
 ```
 
+### Build & Install the iOS/iPadOS Client (`--client`)
+To build `dist/ExtDisplayClient.ipa` in `Release` mode (and automatically install it onto a connected iPad or iPhone over USB-C):
+
+```bash
+./install.sh --client
+```
+
+### Build Both Host `.dmg` and Client `.ipa` (`--all`)
+```bash
+./install.sh --all
+```
+
 ---
 
 ## Option 2: Install on iPad / iPhone (`ExtDisplayClient`)
