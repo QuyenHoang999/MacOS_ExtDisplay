@@ -3,6 +3,7 @@
 
 # Xcode
 DerivedData/
+dist/
 build/
 *.pbxuser
 !default.pbxuser
