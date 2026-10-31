@@ -8,10 +8,19 @@ final class HostController: ObservableObject {
     static let shared = HostController()
 
     struct USBDevice: Identifiable, Equatable {
-        let id: Int          // usbmuxd DeviceID
+        enum Platform: Equatable {
+            case ios
+            case android
+        }
+        let id: Int          // usbmuxd DeviceID or synthetic ADB ID
         let serial: String
+        var platform: Platform = .ios
         var autoConnect = true
         var lastError: String?
+
+        var defaultTitle: String {
+            platform == .android ? "Android Phone (\(serial))" : "USB iOS Device (#\(id))"
+        }
     }
 
     @Published private(set) var usbDevices: [Int: USBDevice] = [:]
@@ -47,6 +56,9 @@ final class HostController: ObservableObject {
     private static let defaults = UserDefaults.standard
 
     private let usb = USBMuxClient()
+    private let adb = ADBMuxClient()
+    private var adbIDBySerial: [String: Int] = [:]
+    private var nextADBID: Int = 100_000
     private var connectingUSB: Set<Int> = []
     private var retryTimer: Timer?
 
@@ -69,6 +81,12 @@ final class HostController: ObservableObject {
             Task { @MainActor in self?.handle(event) }
         }
         usb.startListening()
+
+        adb.onEvent = { [weak self] event in
+            Task { @MainActor in self?.handleADB(event) }
+        }
+        adb.startListening()
+
         usbStatus = "Waiting for a USB device…"
 
         retryTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
@@ -117,7 +135,7 @@ final class HostController: ObservableObject {
     private func handle(_ event: USBMuxClient.DeviceEvent) {
         switch event {
         case .attached(let id, let serial):
-            usbDevices[id] = USBDevice(id: id, serial: serial, autoConnect: autoConnectUSB)
+            usbDevices[id] = USBDevice(id: id, serial: serial, platform: .ios, autoConnect: autoConnectUSB)
             usbStatus = "USB device attached"
             retryUSB()
         case .detached(let id):
@@ -126,6 +144,28 @@ final class HostController: ObservableObject {
             usbStatus = usbDevices.isEmpty ? "Waiting for a USB device…" : "USB device attached"
         case .listenerFailed(let msg):
             usbStatus = msg
+        }
+    }
+
+    private func handleADB(_ event: ADBMuxClient.DeviceEvent) {
+        switch event {
+        case .attached(let serial):
+            let id: Int
+            if let existing = adbIDBySerial[serial] {
+                id = existing
+            } else {
+                id = nextADBID
+                nextADBID += 1
+                adbIDBySerial[serial] = id
+            }
+            usbDevices[id] = USBDevice(id: id, serial: serial, platform: .android, autoConnect: autoConnectUSB)
+            usbStatus = "Android USB device attached"
+            retryUSB()
+        case .detached(let serial):
+            guard let id = adbIDBySerial[serial] else { return }
+            usbDevices[id] = nil
+            sessions.filter { $0.transport == .usb(deviceID: id) }.forEach { $0.stop() }
+            usbStatus = usbDevices.isEmpty ? "Waiting for a USB device…" : "USB device attached"
         }
     }
 
@@ -140,10 +180,18 @@ final class HostController: ObservableObject {
     }
 
     func connectUSB(_ id: Int) {
-        guard session(forUSB: id) == nil, !connectingUSB.contains(id) else { return }
+        guard let device = usbDevices[id], session(forUSB: id) == nil, !connectingUSB.contains(id) else { return }
         connectingUSB.insert(id)
+        let platform = device.platform
+        let serial = device.serial
         Task.detached(priority: .userInitiated) {
-            let result = USBMuxClient.connect(deviceID: id, port: ExtDisplay.port)
+            let result: Result<Int32, USBMuxClient.ConnectError>
+            switch platform {
+            case .ios:
+                result = USBMuxClient.connect(deviceID: id, port: ExtDisplay.port)
+            case .android:
+                result = ADBMuxClient.connect(serial: serial, port: ExtDisplay.port)
+            }
             await MainActor.run {
                 self.connectingUSB.remove(id)
                 switch result {

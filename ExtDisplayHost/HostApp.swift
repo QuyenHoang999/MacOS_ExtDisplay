@@ -260,7 +260,7 @@ private struct DevicesCard: View {
                             .foregroundStyle(.secondary)
                         Text("No USB devices detected yet")
                             .font(.subheadline.weight(.medium))
-                        Text("Plug in your iPad or iPhone with a USB-C cable and open ExtDisplay on the device.")
+                        Text("Plug in your iPad, iPhone, or Android device with a USB-C cable and open ExtDisplay on the device.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -273,7 +273,7 @@ private struct DevicesCard: View {
                     let session = c.session(forUSB: device.id)
                     DeviceCardRow(
                         icon: "cable.connector",
-                        title: session?.deviceName ?? "USB iOS Device (#\(device.id))",
+                        title: session?.deviceName ?? device.defaultTitle,
                         transport: "USB-C",
                         session: session,
                         note: session == nil ? device.lastError : nil,
@@ -599,14 +599,14 @@ private struct DevicesSection: View {
             Text("Devices").font(.subheadline.bold())
 
             if c.usbDevices.isEmpty && c.sessions.isEmpty {
-                Text("Connect an iPad or iPhone with a USB-C cable and open ExtDisplay on it.")
+                Text("Connect an iPad, iPhone, or Android device with a USB-C cable and open ExtDisplay on it.")
                     .font(.callout).foregroundStyle(.secondary)
             }
 
             ForEach(c.usbDevices.values.sorted { $0.id < $1.id }) { device in
                 let session = c.session(forUSB: device.id)
                 DeviceRow(icon: "cable.connector",
-                          title: session?.deviceName ?? "iOS device",
+                          title: session?.deviceName ?? device.defaultTitle,
                           transport: "USB",
                           session: session,
                           note: session == nil ? device.lastError : nil,

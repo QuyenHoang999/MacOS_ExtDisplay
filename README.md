@@ -49,13 +49,20 @@ Ext_Display/
 │   ├── Input/InputInjector.swift   # CGEvent mouse, scroll & tablet/Pencil injection
 │   ├── Transport/USBMuxClient.swift# macOS /var/run/usbmuxd client
 │   └── System/                     # /Applications installer & Login Items registration
-└── ExtDisplayClient/               # iOS / iPadOS 17.0+ Client application
-    ├── ClientApp.swift             # iOS app entry point (idle timer disabled while active)
-    ├── ContentView.swift           # Auto-connect waiting screen & full-screen display view
-    ├── Network/ClientModel.swift   # USB loopback listener, handshake & stats
-    ├── Video/VideoReceiver.swift   # VideoToolbox hardware decoder
-    ├── Render/                     # Metal NV12 renderer (MetalRenderer + Shaders.metal)
-    └── Input/TouchInputView.swift  # Multi-touch & Apple Pencil gesture capture
+├── ExtDisplayClient/               # iOS / iPadOS 17.0+ Client application
+│   ├── ClientApp.swift             # iOS app entry point (idle timer disabled while active)
+│   ├── ContentView.swift           # Auto-connect waiting screen & full-screen display view
+│   ├── Network/ClientModel.swift   # USB loopback listener, handshake & stats
+│   ├── Video/VideoReceiver.swift   # VideoToolbox hardware decoder
+│   ├── Render/                     # Metal NV12 renderer (MetalRenderer + Shaders.metal)
+│   └── Input/TouchInputView.swift  # Multi-touch & Apple Pencil gesture capture
+└── ExtDisplayAndroid/              # Android 8.0+ (API 26+) Client application (Kotlin)
+    └── app/src/main/java/com/qhpersonalteam/extdisplay/
+        ├── MainActivity.kt         # Full-screen immersive activity & waiting screen
+        ├── AndroidClientSession.kt # USB-C TCP 50505 listener & handshake engine
+        ├── VideoDecoder.kt         # Low-latency MediaCodec HEVC/H.264 hardware decoder
+        ├── TouchInputHandler.kt    # Multi-touch & Stylus/S-Pen input mapper
+        └── Protocol.kt             # Binary wire protocol matching ExtDisplayKit
 ```
 
 ---
@@ -114,6 +121,10 @@ To build both `dist/ExtDisplayHost.dmg` and `dist/ExtDisplayClient.ipa` at once:
 3. **iOS/iPadOS Client (`ExtDisplayClient`)**:
    - Connect your iPad or iPhone via USB-C, select the **`ExtDisplayClient`** scheme with your device as the destination, and press **Run (`⌘R`)**.
    - Once opened, `ExtDisplayClient` automatically connects over USB-C and begins streaming your extended Mac desktop.
+4. **Android Phone / Tablet Client (`ExtDisplayAndroid`)**:
+   - Open [`ExtDisplayAndroid/`](ExtDisplayAndroid) in **Android Studio**.
+   - Enable **USB Debugging** on your Android phone (**Settings → Developer options → USB debugging**) and connect it to your Mac via USB-C.
+   - Click **Run (`⌃R`)** in Android Studio to install and launch `ExtDisplay` on your Android phone — `ExtDisplayHost` on macOS automatically detects the Android phone over ADB USB-C and extends your Mac desktop onto it.
 
 ---
 

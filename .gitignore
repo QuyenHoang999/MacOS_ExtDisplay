@@ -3,7 +3,7 @@
 
 # Xcode
 DerivedData/
-build/
+/build/
 *.pbxuser
 !default.pbxuser
 *.mode1v3
@@ -16,7 +16,6 @@ xcuserdata/
 *.moved-aside
 *.xccheckout
 *.xcscmblueprint
-*.ipa
 *.dSYM.zip
 *.dSYM
 
@@ -26,3 +25,15 @@ xcuserdata/
 Packages/ExtDisplayKit/.build/
 Packages/ExtDisplayKit/.swiftpm/
 
+# IDE & Gradle caches (ExtDisplayAndroid source & APK files remain tracked)
+.idea/
+.gradle/
+ExtDisplayAndroid/.gradle/
+ExtDisplayAndroid/.idea/
+ExtDisplayAndroid/local.properties
+ExtDisplayAndroid/build/
+ExtDisplayAndroid/app/build/*
+!ExtDisplayAndroid/app/build/outputs/
+ExtDisplayAndroid/app/build/outputs/*
+!ExtDisplayAndroid/app/build/outputs/apk/
+*.iml

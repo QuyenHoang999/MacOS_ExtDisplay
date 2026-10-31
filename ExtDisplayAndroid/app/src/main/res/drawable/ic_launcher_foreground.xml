@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Rear Mac Display -->
+    <path
+        android:fillColor="#13254B"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2.8"
+        android:pathData="M24,30 C24,26.686 26.686,24 30,24 L66,24 C69.314,24 72,26.686 72,30 L72,56 C72,59.314 69.314,62 66,62 L30,62 C26.686,62 24,59.314 24,56 Z" />
+    <!-- Foreground Extended Tablet/Phone Display -->
+    <path
+        android:fillColor="#0EA5E9"
+        android:strokeColor="#E0F2FE"
+        android:strokeWidth="2.6"
+        android:pathData="M40,44 C40,40.686 42.686,38 46,38 L78,38 C81.314,38 84,40.686 84,44 L84,74 C84,77.314 81.314,80 78,80 L46,80 C42.686,80 40,77.314 40,74 Z" />
+    <!-- Connection Arrow -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M54,59 L69,59 M63,53 L69,59 L63,65" />
+</vector>
+
