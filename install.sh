@@ -6,7 +6,8 @@
 #   ./install.sh            # Build & install macOS Host to /Applications & start in background
 #   ./install.sh --dmg      # Build macOS Host + create dist/ExtDisplayHost.dmg
 #   ./install.sh --client   # Build iOS/iPadOS Client -> dist/ExtDisplayClient.ipa (& install if device connected)
-#   ./install.sh --all      # Build macOS Host (.dmg) + iOS/iPadOS Client (.ipa)
+#   ./install.sh --android  # Build Android Client -> dist/ExtDisplayAndroid.apk (& install via adb if connected)
+#   ./install.sh --all      # Build macOS Host (.dmg) + iOS/iPadOS Client (.ipa) + Android Client (.apk)
 #
 
 set -euo pipefail
@@ -140,6 +141,38 @@ build_client() {
   rm -rf "${derived_dir}"
 }
 
+build_android() {
+  local android_dir="${PROJECT_DIR}/ExtDisplayAndroid"
+  local apk_out="${DIST_DIR}/ExtDisplayAndroid.apk"
+
+  echo "==> Building ExtDisplayAndroid (Release APK)..."
+  mkdir -p "${DIST_DIR}"
+  (cd "${android_dir}" && ./gradlew assembleRelease)
+
+  local built_apk="${android_dir}/app/build/outputs/apk/release/app-release.apk"
+  if [[ ! -f "${built_apk}" ]]; then
+    built_apk="$(find "${android_dir}/app/build/outputs/apk" -name "*.apk" | head -n 1 || true)"
+  fi
+  if [[ -z "${built_apk}" || ! -f "${built_apk}" ]]; then
+    echo "Error: Built Android APK not found." >&2
+    exit 1
+  fi
+
+  cp "${built_apk}" "${apk_out}"
+  echo "✅ Created Android Release APK: ${apk_out}"
+
+  local adb_bin="${HOME}/Library/Android/sdk/platform-tools/adb"
+  if [[ ! -x "${adb_bin}" ]]; then
+    adb_bin="$(command -v adb 2>/dev/null || true)"
+  fi
+  if [[ -n "${adb_bin}" && -x "${adb_bin}" ]]; then
+    if "${adb_bin}" devices | grep -w "device" >/dev/null 2>&1; then
+      echo "==> Installing ${apk_out} onto connected Android phone..."
+      "${adb_bin}" install -r "${apk_out}" || true
+    fi
+  fi
+}
+
 case "${MODE}" in
   host)
     build_host "false"
@@ -150,12 +183,16 @@ case "${MODE}" in
   --client)
     build_client
     ;;
+  --android)
+    build_android
+    ;;
   --all)
     build_host "true"
     build_client
+    build_android
     ;;
   *)
-    echo "Usage: ./install.sh [--dmg | --client | --all]" >&2
+    echo "Usage: ./install.sh [--dmg | --client | --android | --all]" >&2
     exit 1
     ;;
 esac
