@@ -25,6 +25,8 @@
 
 ```text
 Ext_Display/
+├── install.sh                      # One-command Release builder, /Applications installer & DMG packager
+├── INSTALL.md                      # Detailed installation & distribution guide
 ├── Ext_Display.xcodeproj/          # Xcode project (ExtDisplayHost & ExtDisplayClient targets)
 ├── Config/
 │   ├── Host-Info.plist             # macOS Host bundle configuration (LSUIElement, permissions)
@@ -67,19 +69,37 @@ Ext_Display/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation & Getting Started
+
+See [`INSTALL.md`](INSTALL.md) for full details.
+
+### 1. Quick Install on macOS (`install.sh`)
+
+Run the included [`install.sh`](install.sh) script from Terminal to build `ExtDisplayHost.app` in `Release` mode, install it into `/Applications/ExtDisplayHost.app`, configure background auto-start on login, and launch it in the background:
+
+```bash
+chmod +x ./install.sh
+./install.sh
+```
+
+To also package a distributable drag-and-drop `.dmg` installer (`dist/ExtDisplayHost.dmg`):
+
+```bash
+./install.sh --dmg
+```
+
+### 2. Build & Run via Xcode
 
 1. **Open the Project**:
    ```bash
    open Ext_Display.xcodeproj
    ```
-2. **Build & Run the macOS Host (`ExtDisplayHost`)**:
+2. **macOS Host (`ExtDisplayHost`)**:
    - Select the **`ExtDisplayHost`** scheme and target **My Mac**, then press **Run (`⌘R`)**.
    - Click the **ExtDisplay** icon in the macOS top menu bar (and optionally click **Open ExtDisplay Window**) to grant:
      - **Screen Recording** permission (required to capture the virtual display).
      - **Accessibility** permission (required to inject touch and Apple Pencil input).
-   - On launch, `ExtDisplayHost` automatically copies itself to `/Applications/ExtDisplayHost.app` and enables **Start automatically when Mac turns on**.
-3. **Build & Run the iOS/iPadOS Client (`ExtDisplayClient`)**:
+3. **iOS/iPadOS Client (`ExtDisplayClient`)**:
    - Connect your iPad or iPhone via USB-C, select the **`ExtDisplayClient`** scheme with your device as the destination, and press **Run (`⌘R`)**.
    - Once opened, `ExtDisplayClient` automatically connects over USB-C and begins streaming your extended Mac desktop.
 
